@@ -8,7 +8,7 @@ function _init()
 	banana_anim = 16
 	
 	--player/physics init
-	gravity = 2.3
+	gravity = 4
 	friction = 0.45
 
 	player={
@@ -20,14 +20,14 @@ function _init()
 	yspd=0,
 	xspd=0,
 	jspd=0,
-    max_xspd=1,
+    max_xspd=3,
     max_yspd=3,
 	max_jspd=3,
 	xdis = 0,
     acc=0.3,
-	j_acc=1,
+	max_jump=0,
     anim=0,
-	jumping=false,
+	jumped=false,
 	climbing=true
   	}
 
@@ -60,50 +60,63 @@ function player_update()
 		player.y += gravity
 	end
 
--- jump
-	if btn(🅾️) then
-		player.jumping = true
-		player.climbing = false
-			if player.jspd <= player.max_jspd then
-				player.jspd += player.j_acc	
+
+	if btn(🅾️) and player.jumped then
+			player.y -= 8*y_acc
+			if y_acc >= 0 then
+				y_acc -= 0.05
+			else
+				y_acc = 0
 			end
-	player.y -= player.jspd
+	elseif not btn(🅾️) then
+		player.jumped = false
 	end
-		
+
+-- jump
+	if btn(🅾️) and player.climbing and not player.jumped then
+		player.climbing = false
+		player.jumped = true
+		player.max_jump = 0
+		y_acc = 1
+		x_acc = 1
+		last_dir = 0
+	end
+
+	-- if youre jumping and holding the jump button, lerp the jumping force
+
+	
 
 	-- aerial (x) movement
-	if player.jumping then
-		if player.xdis >= 4 then
-			player.xspd -= 0.2
-			
-			if btn(⬅️) then
-				if player.xspd <= player.max_xspd then
-					player.xspd += player.acc
-				else
-					player.xspd -= player.max_xspd
-				end
-			xdir = -1
-			player.xdis += player.xspd
-
-			elseif btn(➡️) then
-				if player.xspd <= player.max_xspd then
-					player.xspd += player.acc
-				else
-					player.xspd -= player.max_xspd
-				end
-				xdir = 1
-				player.xdis += player.xspd
-			
-			else 
-				if player.xspd > 0 then
-					player.xspd -= 0.2
-				else
-					xdir = 0
-					player.xspd = 0
-				end
+	if not player.climbing then
+		if btn(⬅️) then
+			player.xspd = 6*x_acc
+			if x_acc >= 0.1 then
+				x_acc -= 0.05
+			else
+				x_acc = 0.1
 			end
-			player.x += player.xspd*xdir
+			xdir = -1
+			last_dir = xdir
+
+		elseif btn(➡️) then
+			player.xspd = 6*x_acc
+			if x_acc >= 0.1 then
+				x_acc -= 0.05
+			else
+				x_acc = 0.1
+			end
+			xdir = 1
+			last_dir = xdir
+		
+		else 
+			if player.xspd >= 0 then
+				player.xspd -= 0.1
+			else
+				player.xspd = 0.5
+			end
+			xdir = last_dir
 		end
+		player.x += player.xspd*xdir
 	end
 	
 
@@ -133,7 +146,31 @@ function player_update()
 		end
 		player.y += player.yspd*ydir
 	end
+
+
+-- vine collision
+	if not btn(🅾️) and player.x < 5 or player.x > 118 then
+		player.jumped = false
+		player.climbing = true
+	end
+
+-- general out of bounds collision
+-- left border
+	if player.x < 2 then
+		player.x = 2
+	end
+--right border
+	if player.x > 126 then
+		player.x = 126
+	end
+--falls in pit
+	if player.y > 128 then
+		run()
+	end
+
 end
+
+
 -- BANANAS
 
 -- create functions
@@ -248,7 +285,7 @@ function _draw()
 	map()
 
 	-- debug prints
- 	--print(banana.id)
+ 	print(player.jumped)
 end  
 __gfx__
 aaaaaaa900000000000b300000003b00111111111111111122222222222222222222222222222222999999999999999999999999000000000000000000000000
