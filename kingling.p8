@@ -1,9 +1,96 @@
 pico-8 cartridge // http://www.pico-8.com
 version 35
 __lua__
-function _init()
 
+
+state = {}
+-- STATES
+function _init()
+	show_menu()
+end
+
+function _update()
+	state.update()
+end
+
+function _draw()
+	state.draw()
+end
+
+
+-- STATE: MENU
+
+function show_menu()
+	state.update = menu_update
+	state.draw = menu_draw
+
+end
+
+function menu_update()
+	if btn(4) then
+		show_game(1)
+	end
+end
+
+function menu_draw()
+	cls()
+	print("press x to start",32,64,9)
+	
+end
+
+-- STATE: LEVEL_PASS
+
+function show_level_passed(current_level)
+	state.update = level_passed_update
+	state.draw = level_passed_draw
+
+end
+
+function level_passed_update()
+	if btn(4) then
+		show_game(level_id+1)
+	end
+end
+
+function level_passed_draw()
+	cls()
+	print("level cleared!")
+	print("press x to start",32,64,9)
+end
+
+
+-- STATE: GAME OVER
+
+function show_game_over()
+	state.update = game_over_update
+	state.draw = game_over_draw
+
+end
+
+function game_over_update()
+end
+
+function game_over_draw()
+end
+
+
+-- STATE: GAME, set the level thats going to be played
+
+function show_game(level)
+	game_init()
+	set_level(level)
+	state.update = game_update
+	state.draw = game_draw
+
+end
+
+
+function game_init()
+	
 	game_over = false
+	start_screen = true
+	target = 0
+
 	-- anim
 	banana_timer = 0
 	blast_timer = 0
@@ -45,15 +132,8 @@ function _init()
 	--Objects
 	barrels = {}
 	bananas = {}
-	--tire
-	tire={
-	spr=56,
-	x=72,
-	y=104,
-	w=8,
-	h=8,
-	anim=false
-	}
+	platforms = {}
+	tires = {}
 
 	-- barrel blast
 	blast={
@@ -63,11 +143,8 @@ function _init()
 	show=false
 	}
 
-
-
 	--general
 	t = 0 --general timer
-
 
 	--waves
 	evens = {2,2,4,4,4,6,6,6,8,8}
@@ -77,19 +154,6 @@ function _init()
 	waveintensity = 5
 	wave_index = 1
 	shuffle(evens)
-
-	--music
-	music(0) -- play music from pattern 0
-
-	--level 0
-	banana_total = 50
-	level_time_limit = 30
-	--create_wave(rnd(6)+5,rnd(2)+1,"xsine") --start game with a wave
-	--create_barrel(0,12,64,"right","siney",0.3)
-	--create_barrel(1,116,64,"left","siney",0.3)
-	--create_barrel(2,64,12,"bottom","sinex",0.3)
-	create_barrel(3,100,80,"top","sinex",0.2)
-	--create_barrel(1,100,64,"top","sinex",0.3)
 
 end
 
@@ -122,16 +186,82 @@ function box_hit(
 	return hit
 end
 
+-- LEVELS
+
+function set_level(level)
+	level_id = level
+	--LEVELS
+	--examples:
+		--level_time_limit = 60
+		--music(0) -- play music from pattern 0
+		--create_wave(rnd(6)+5,rnd(2)+1,"xsine") --start game with a wave
+		--create_barrel(0,12,64,"right","siney",0.3) -- create a barrel with rightsided opening going up and down
+		--create_barrel(1,116,64,"left","siney",0.3)
+		--create_barrel(2,64,12,"bottom","sinex",0.3)
+		--create_barrel(3,100,80,"top","sinex",0.2)
+		--create_barrel(1,100,64,"top","sinex",0.3)
+		--create_platform(1,32,100,"has_tire","siney",1)
+		--create_tire(1,32,100,56,false)
+		--create_platform(2,90,100,"has_tire","siney",1)
+		--create_tire(2,90,100,56,false)
+
+	--levelpicker
+
+	if level_id == 1 then
+		--level 0
+		level_time_limit = 10
+		target = 3
+		create_platform(1,22,100,"has_tire","siney",1.5)
+		create_tire(1,22,100,56,false)
+		create_platform(2,48,100,"has_tire","siney",1)
+		create_tire(2,48,100,56,false)
+		create_platform(3,78,100,"has_tire","siney",1.5)
+		create_tire(3,78,100,56,false)
+		create_platform(4,104,100,"has_tire","siney",1)
+		create_tire(4,104,100,56,false)
+	end
+
+	if level_id == 2 then
+		--level 0
+		level_time_limit = 30
+		target = 3
+		create_platform(1,32,100,"has_tire","followx",1)
+		create_tire(1,32,100,56,false)
+		create_barrel(1,64,12,"bottom","siney",1)
+
+	end
+end
+
 -- CREATE FUNCTIONS
 
--- BARRELS
+-- Barrels
 -- id=auto,x,y,type of orientation: top, bottom, right, left,type of movement,movement modifier
 function create_barrel(id,x,y,type,move,mod)
    barrel={id=id,x=x,y=y,type=type,move=move,mod=mod}
    add(barrels,barrel)
 end
 
--- BANANAS
+
+-- Platforms
+function create_platform(id,x,y,type,move,mod)
+	platform={id=id,x=x,y=y,type=type,move=move,mod=mod}
+	add(platforms,platform)
+end
+
+
+--Tires
+function create_tire(id,x,y,spr,anim)
+	tire={id=id,x=x,y=y,spr=spr,anim=anim}
+	add(tires,tire)
+end
+
+--Spikes
+function create_spike(id,x,y)
+	spike={id=id,x=x,y=y}
+	add(spike,spikes)
+end
+
+-- Bananas
 
 function create_banana(id,x,y,yspd,type)
    banana={id=id,x=x,y=y,yspd=yspd,type=type}
@@ -196,23 +326,34 @@ end
 
 
 
-function object_update(object, move, mod)
---mod offsets sine
-	if move == "sinex" then
-		ti = t*(3*mod)
-		object.x = object.x + sin(ti/80)*2
-	end
-	if move == "siney" then
-		ti = t*(3*mod)
-		object.y = object.y + sin(ti/80)*2
-	end
--- mod slows move
-	if move == "followx" then
-		object.x = (player.x*mod)
-	end
---mod slows move
-	if move == "followy" then
-		object.y = (player.y*mod)
+function platform_update()
+	for platform in all(platforms) do
+	--mod offsets sine
+		for tire in all (tires) do
+			if tire.id == platform.id then
+				tire.x = platform.x
+				tire.y = platform.y
+			end
+		end
+		if platform.move == "static" then
+			platform.x = platform.x
+		end
+		if platform.move == "sinex" then
+			ti = t*(3*platform.mod)
+			platform.x = platform.x + sin(ti/80)*2
+		end
+		if platform.move == "siney" then
+			ti = t*(3*platform.mod)
+		 platform.y = platform.y + sin(ti/80)*2
+		end
+	-- mod slows move
+		if platform.move == "followx" then
+		 platform.x = (player.x*platform.mod)
+		end
+	--mod slows move
+		if platform.move == "followy" then
+		 platform.y = (player.y*platform.mod)
+		end
 	end
 
 end
@@ -271,7 +412,7 @@ end
 			end
 			if pbarrel.type == "top" then
 				player.y = player.y - 5
-				player.y -= 8-(btimer*0.15)
+				player.y -= 8-(btimer*0.2)
 			end
 			if pbarrel.type == "bottom" then
 				player.y = player.y + 7
@@ -379,13 +520,22 @@ end
 	end
 
 -- tire collision
-	if box_hit(player.x,player.y,player.w,player.h,tire.x,tire.y,tire.w,tire.h) then
-		tire.anim = true
-		player.jumped = true
-		y_acc = player.y_acc
-		x_acc = player.x_acc
-		
+	for tire in all(tires) do
+		if box_hit(player.x,player.y,player.w,player.h,tire.x,tire.y,8,8) then
+			tire.anim = true
+			player.jumped = true
+			y_acc = player.y_acc
+			x_acc = player.x_acc
+		end
 	end
+
+-- -- platform collision
+-- 	for platform in all(platforms) do
+-- 		if box_hit(player.x,player.y,player.w,player.h,platform.x,platform.y,16,24) then
+-- 			player.x +=platform.x	
+			
+-- 		end	
+-- 	end
 
 -- barrel collision
 	for barrel in all(barrels) do
@@ -397,6 +547,7 @@ end
 			end
 		end	
 	end
+
 --banana collision
 	for banana in all(bananas) do
 		if not player.inbarrel then
@@ -406,6 +557,7 @@ end
 			end
 		end
 	end
+
 -- general out of bounds collision
 -- top of screen
 	if player.y < -16 then
@@ -481,19 +633,28 @@ i = 0
 end
 
 
-function _update()
+function game_update()
 
+
+	-- check if we got a game over or if we passed the level (target score was obtained before timer ran out)
 	if game_over then
-		if btn(🅾️) then
-			run()
+		if level_passed then
+			show_level_passed()
+		else
+			show_game_over()
 		end
 	else
-	-- game runs until time limit is reached.
+
+	-- if not game over game runs until time limit is reached.
+
 		game_timer += 1
 		if game_timer == 20 then
 			game_time_counter += 1
 				if game_time_counter == 30 then
 					game_over = true
+					if player.score >= target then
+						level_passed = true
+					end
 				end
 			game_timer = 0
 		end 
@@ -519,12 +680,14 @@ function _update()
 		end
 
 		-- tire hit
-		if tire.anim then
-			if tire.spr < 58 then
-				tire.spr += 1
-			else
-				tire.spr = 56
-				tire.anim = false
+		for tire in all(tires) do
+			if tire.anim then
+				if tire.spr < 58 then
+					tire.spr += 1
+				else
+					tire.spr = 56
+					tire.anim = false
+				end
 			end
 		end
 
@@ -545,7 +708,7 @@ function _update()
 		-- update functions
 
 		player_update()
-		object_update(tire,"followx", 1)
+		platform_update()
 		barrel_update()
 		banana_update()
 
@@ -563,99 +726,100 @@ function _update()
 	end
 end
 
-function _draw()
+function game_draw()
 
-	if game_over then
-		cls()
-		print("score:",50,58,9)
-	 	print(player.score,64,64,9)
-	else
+	cls()
+	-- draw map
+	map()
 
-		cls()
-		-- draw map
-		map()
+	-- draw all bananas
+	for banana in all(bananas) do 
+		spr(banana_anim,banana.x,banana.y)
+	end
 
-		-- draw all bananas
-		for banana in all(bananas) do --draw banana
+	-- draw all vines (TODO make create_vines())
+	vines = {2,3}
+	for i=0,12 do
+		spr(2,0,i*8)
+		spr(2,120,i*8)  
+	end
 
-			spr(banana_anim,banana.x,banana.y)
+	-- draw monkey
+
+	if not player.inbarrel then
+		if player.flp then
+			--top
+			spr(53,player.x,player.y,1,1,true,false)
+			--bottom
+			spr(54,player.x,player.y+8,1,1,true,false)
+			--tail
+			spr(55,player.x+8,player.y+8,1,1,true, false)
+		else
+			--top
+			spr(53,player.x,player.y)
+			--bottom
+			spr(54,player.x,player.y+8)
+			--tail
+			spr(55,player.x-8,player.y+8)
 		end
+	end
 
-		vines = {2,3}
-		for i=0,12 do
-			spr(2,0,i*8)
-			spr(2,120,i*8)  
-		end
 
-		-- draw monkey
 
-		if not player.inbarrel then
-			if player.flp then
-				--top
-				spr(53,player.x,player.y,1,1,true,false)
-				--bottom
-				spr(54,player.x,player.y+8,1,1,true,false)
-				--tail
-				spr(55,player.x+8,player.y+8,1,1,true, false)
-			else
-				--top
-				spr(53,player.x,player.y)
-				--bottom
-				spr(54,player.x,player.y+8)
-				--tail
-				spr(55,player.x-8,player.y+8)
-			end
-		end
-		--platform
+	--draw all platforms
+	for platform in all(platforms) do
+		spr(49,platform.x-8,platform.y+8) -- left bot
+		spr(33,platform.x-8,platform.y) -- left top
+		spr(51,platform.x,platform.y+8) -- middle bot
+		spr(35,platform.x,platform.y) -- middle top
+		spr(50,platform.x+8,platform.y+8) -- right bot
+		spr(34,platform.x+8,platform.y) -- right top
+	end
 
-		spr(49,tire.x-8,tire.y+8) -- left bot
-		spr(33,tire.x-8,tire.y) -- left top
-		spr(51,tire.x,tire.y+8) -- middle bot
-		spr(35,tire.x,tire.y) -- middle top
-		spr(50,tire.x+8,tire.y+8) -- right bot
-		spr(34,tire.x+8,tire.y) -- right top
-		-- tire
+	-- draw all tires
+	for tire in all(tires) do
 		spr(tire.spr,tire.x,tire.y) -- tire
+	end
 
 
+	--draw barrels
+	for barrel in all(barrels) do
+		if barrel.type == "top" then
+			-- barrel on x axis (top open)
+			spr(59,barrel.x,barrel.y,2,1) -- left top
+			spr(61,barrel.x,barrel.y+8,2,1) -- right bot
+		elseif barrel.type == "bottom" then
+			-- barrel on y axis (right side open)
+			spr(59,barrel.x,barrel.y+8,2,1,false,true) -- left top
+			spr(61,barrel.x,barrel.y,2,1,false,true) -- right bot
+		elseif barrel.type == "right" then
+			-- barrel on y axis (right side open)
+			--spr(43,ybarrel.x,ybarrel.y+8) -- left bot
+			spr(27,barrel.x,barrel.y,2,1) -- left top
+			spr(43,barrel.x,barrel.y+8,2,1) -- right bot
+		elseif barrel.type == "left" then
+			-- barrel on y axis (right side open)
+			--spr(43,ybarrel.x,ybarrel.y+8) -- left bot
+			spr(27,barrel.x,barrel.y,2,1,true) -- left top
+			spr(43,barrel.x,barrel.y+8,2,1,true) -- right bot
 
-		--barrels
-		for barrel in all(barrels) do
-			if barrel.type == "top" then
-				-- barrel on x axis (top open)
-				spr(59,barrel.x,barrel.y,2,1) -- left top
-				spr(61,barrel.x,barrel.y+8,2,1) -- right bot
-			elseif barrel.type == "bottom" then
-				-- barrel on y axis (right side open)
-				spr(59,barrel.x,barrel.y+8,2,1,false,true) -- left top
-				spr(61,barrel.x,barrel.y,2,1,false,true) -- right bot
-			elseif barrel.type == "right" then
-				-- barrel on y axis (right side open)
-				--spr(43,ybarrel.x,ybarrel.y+8) -- left bot
-				spr(27,barrel.x,barrel.y,2,1) -- left top
-				spr(43,barrel.x,barrel.y+8,2,1) -- right bot
-			elseif barrel.type == "left" then
-				-- barrel on y axis (right side open)
-				--spr(43,ybarrel.x,ybarrel.y+8) -- left bot
-				spr(27,barrel.x,barrel.y,2,1,true) -- left top
-				spr(43,barrel.x,barrel.y+8,2,1,true) -- right bot
-
-			end
 		end
+	end
 
-		-- show barrel blast
-		if blast.show then
-			spr(blast.spr,blast.x,blast.y)
-		end
+	-- show barrel blast
+	if blast.show then
+		spr(blast.spr,blast.x,blast.y)
+	end
 
-		-- score prints
-		print(player.score,114,6,9)
-		print(game_time_counter,64,6,9)
+	-- score prints
+	print(player.score,114,6,9)
+	print(game_time_counter,64,6,9)
 
-		-- debug
-	
-		end
-	end  
+
+	-- debug
+
+end
+
 __gfx__
 0aaaaaa000000000000b300000003b001111111111111111222222222222222222222222222222229999999900000000077aaaa00aa777a00aaaa7700aaaaaa0
 a111111900088000000b3000000b3000111111112121212122222222222222222222222229292929999999990000000071111119a1111119a111111aa1111119
@@ -751,7 +915,7 @@ __sfx__
 0110000014551145521455214550145401454214540145401b5411b5301b5161b5421b5301b5161b5421b5301b5161453014510015001453001500145101b5001b555015001b5501b552145001b5521b55201500
 d11000000c0420c03700037000520f0300f0510003117052180511b0321b0540c0551603318052160350f05207052070500f050110521305313050110550f0520f0520f0570c057000070c0530f0500000000000
 __music__
-02 42040109
+02 42040149
 00 41040307
 00 41040109
 00 41040308
